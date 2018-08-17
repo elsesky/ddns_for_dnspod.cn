@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>uilistpod</class>
+ <widget class="QDialog" name="uilistpod">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>750</width>
+    <height>480</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>750</width>
+    <height>480</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>750</width>
+    <height>480</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>配置文件生成工具</string>
+  </property>
+  <widget class="QTableWidget" name="record_list">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>60</y>
+     <width>731</width>
+     <height>381</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <column>
+    <property name="text">
+     <string>域名</string>
+    </property>
+    <property name="font">
+     <font>
+      <family>Adobe Devanagari</family>
+     </font>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>域ID</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>记录名</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>记录ID</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>记录类型</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>token</string>
+    </property>
+   </column>
+  </widget>
+  <widget class="QPushButton" name="pushButton_getrecode">
+   <property name="geometry">
+    <rect>
+     <x>644</x>
+     <y>20</y>
+     <width>91</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>获取记录清单</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="txt_podtoken">
+   <property name="geometry">
+    <rect>
+     <x>100</x>
+     <y>20</y>
+     <width>531</width>
+     <height>20</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>20</y>
+     <width>91</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>输入API TOKEN</string>
+   </property>
+  </widget>
+  <widget class="QWidget" name="">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>450</y>
+     <width>701</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <item>
+     <widget class="QPushButton" name="pushButton_makeini">
+      <property name="text">
+       <string>生成INI配置文件</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="pushButton_install_and_start_service">
+      <property name="text">
+       <string>安装并启动服务</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="pushButton_stop_and_del_service">
+      <property name="text">
+       <string>停止并删除服务</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <zorder>record_list</zorder>
+  <zorder>pushButton_makeini</zorder>
+  <zorder>pushButton_getrecode</zorder>
+  <zorder>txt_podtoken</zorder>
+  <zorder>label</zorder>
+  <zorder>pushButton_install_and_start_service</zorder>
+  <zorder>pushButton_install_and_start_service</zorder>
+  <zorder>pushButton_stop_and_del_service</zorder>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
