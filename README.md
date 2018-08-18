@@ -1,10 +1,10 @@
 # ddns_for_dnspod.cn
 DNSPOD中国站DDNS简易客户端
-1.编译环境说明：
+# 编译环境说明：
 
 源码编译请自行准备python2.7 32位编译环境。
 
-1.1依赖包（均为32位，请勿下载64位）：
+## 依赖包（均为32位，请勿下载64位）：
 
 pywin32
 
@@ -14,7 +14,7 @@ pyqt（源码中已含安装包，路径/uilistpod/PyQt4-4.10.3-gpl-Py2.7-Qt4.8.
 
 其它理论上python应该自带，如果没有，请自行pip下。
 
-2.文件说明：
+# 文件说明：
 │  pylistpod.py  　命令行版获取指定token下的域ID以及记录ID，仅供测试用
 
 │  pypod.py       命令行版DDNS手动提交客户端，仅供测试用（可能有BUG）
@@ -53,4 +53,3 @@ pyqt（源码中已含安装包，路径/uilistpod/PyQt4-4.10.3-gpl-Py2.7-Qt4.8.
         __init__.py          保持默认
 
 
-3.发布包使用说明：
