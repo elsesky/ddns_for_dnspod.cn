@@ -5,13 +5,9 @@ DNSPOD中国站DDNS简易客户端
 源码编译请自行准备python2.7 32位编译环境。
 
 ## 依赖包（均为32位，请勿下载64位）：
-
-pywin32
-
-py2exe
-
-pyqt（源码中已含安装包，路径/uilistpod/PyQt4-4.10.3-gpl-Py2.7-Qt4.8.5-x32.exe）
-
+- pywin32
+- py2exe
+- pyqt（源码中已含安装包，路径/uilistpod/PyQt4-4.10.3-gpl-Py2.7-Qt4.8.5-x32.exe）
 其它理论上python应该自带，如果没有，请自行pip下。
 
 # 文件说明：
@@ -31,7 +27,6 @@ pyqt（源码中已含安装包，路径/uilistpod/PyQt4-4.10.3-gpl-Py2.7-Qt4.8.
 -  user.tpl.ini               服务启动的依赖文件。用户配置文件模板，可根据需要自行编辑。请勿修改里面各个域名称，否则会导致服务异常。该文件编辑完成后，请将其更名为user.ini。
 
  -└─uilistpod
- 
       -  Core.py              界面核心代码，基本不用动啥。定义界面的各种行为以及界面内容初始化。
       -  PyQt4-4.10.3-gpl-Py2.7-Qt4.8.5-x32.exe      
       -  ui2py.cmd            将ui转换为py
