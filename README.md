@@ -25,7 +25,6 @@ DNSPOD中国站DDNS简易客户端
 -  uilistpod.py               GUI界面主体（主体功能均通过它实现）
 -  uilistpod_core.py          GUI界面的处理函数（主体的所有按钮功能均通过它实现）
 -  user.tpl.ini               服务启动的依赖文件。用户配置文件模板，可根据需要自行编辑。请勿修改里面各个域名称，否则会导致服务异常。该文件编辑完成后，请将其更名为user.ini。
-
  -└─uilistpod
       -  Core.py              界面核心代码，基本不用动啥。定义界面的各种行为以及界面内容初始化。
       -  PyQt4-4.10.3-gpl-Py2.7-Qt4.8.5-x32.exe      
