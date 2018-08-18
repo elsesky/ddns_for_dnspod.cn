@@ -1,11 +1,17 @@
 # ddns_for_dnspod.cn
 DNSPOD中国站DDNS简易客户端
 编译环境说明：
+
 源码编译请自行准备python2.7 32位编译环境。
+
 依赖包（均为32位，请勿下载64位）：
+
 pywin32
+
 py2exe
-pyqt（源码中已含安装包，在路径）
+
+pyqt（源码中已含安装包，路径/uilistpod/PyQt4-4.10.3-gpl-Py2.7-Qt4.8.5-x32.exe）
+
 其它理论上python应该自带，如果没有，请自行pip下。
 
 文件说明：
