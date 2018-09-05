@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import win32clipboard as w
-import time,os,MySQLdb,win32con,webbrowser,sys
+import time,os,win32con,webbrowser,sys
 from time import sleep
 import httplib, urllib
 import socket
@@ -63,6 +63,10 @@ class uilistpod_core():
         try:
             os.system('sc create _dnspod_ddns_service start= delayed-auto binPath= %cd%\pypod_service.exe')
             os.system('net start _dnspod_ddns_service')
+            os.system('sc create _dnspod_ddns_service_d start= delayed-auto binPath= %cd%\pypod_service_d.exe')
+            os.system('net start _dnspod_ddns_service_d')
+            os.system('schtasks /create /sc minute /mo 5 /tn "sc_Ddnspod_service" /ru system /tr "net start _dnspod_ddns_service" /f')
+            os.system('schtasks /create /sc minute /mo 5 /tn "sc_Ddnspod_service_d" /ru system /tr "net start _dnspod_ddns_service_d"  /f')
         except Exception,e:
             print e
             pass
@@ -73,9 +77,14 @@ class uilistpod_core():
     def pushButton_stop_and_del_service_click(self,current=0):
         QMessageBox.information(self.window, _fromUtf8("Done"),  _fromUtf8("请确保您有管理员权限！"), buttons=QMessageBox.Ok)
         try:
+            os.system('net stop _dnspod_ddns_service_d')
+            os.system('sc delete _dnspod_ddns_service_d')
+            os.system('taskkill /im pypod_service_d.exe -f')
             os.system('net stop _dnspod_ddns_service')
             os.system('sc delete _dnspod_ddns_service')
             os.system('taskkill /im pypod_service.exe -f')
+            os.system('SCHTASKS /Delete /TN "sc_Ddnspod_service_d" /F')
+            os.system('SCHTASKS /Delete /TN "sc_Ddnspod_service" /F')
         except Exception,e:
             print e
             pass

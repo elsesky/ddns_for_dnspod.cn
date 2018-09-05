@@ -9,6 +9,7 @@ import sys,os,ConfigParser
 import win32serviceutil 
 import win32service 
 import win32event 
+import gc
 
 g_logname = "dnspod.log"
 
@@ -19,7 +20,10 @@ class pydnspod:
     _sub_domain = ""
     _modname = "pydnspod"
     _account = "dnspod"
+    _user_agent = "ELSESKY DDNS DNSPOD CLIENT/V1.0.20180904/(elsesky@elsesky.bid)"
     current_ip = ""
+
+
     params = dict(
         login_token=None,
         format="json",
@@ -49,7 +53,7 @@ class pydnspod:
     #从服务端获取设置的IP
     def get_current_ip_from_dnspot(self):
         try:
-            headers = {'User-Agent': 'ELSESKY DDNS DNSPOD CLIENT/V1.0.20180817',"Content-type": "application/x-www-form-urlencoded", "Accept": "text/json"}
+            headers = {'User-Agent': self._user_agent,"Content-type": "application/x-www-form-urlencoded", "Accept": "text/json"}
             conn = httplib.HTTPSConnection("dnsapi.cn")
             conn.request("POST", "/Record.Info", urllib.urlencode(self.params), headers)
             response = conn.getresponse().read()
@@ -96,29 +100,40 @@ class pydnspod:
     #调用API接口设置IP
     def ddns(self,ip):
         self.params.update(dict(value=ip))
-        headers = {'User-Agent': 'ELSESKY DDNS DNSPOD CLIENT/V1.0.20180817',"Content-type": "application/x-www-form-urlencoded", "Accept": "text/json"}
-        conn = httplib.HTTPSConnection("dnsapi.cn")
-        conn.request("POST", "/Record.Ddns", urllib.urlencode(self.params), headers)
+        headers = {'User-Agent': self._user_agent,"Content-type": "application/x-www-form-urlencoded", "Accept": "text/json"}
+        try:
+            conn = httplib.HTTPSConnection("dnsapi.cn")
+            conn.request("POST", "/Record.Ddns", urllib.urlencode(self.params), headers)
+            response = conn.getresponse()
+            do_log(self._modname,self._account,str(response.status) + response.reason )
+            data = response.read()
+            do_log(self._modname,self._account,data)
+            conn.close()
+            return response.status == 200
+        except Exception, e:
+            do_log(self._modname,self._account,"---------Setting ddns ip failed  @ddns-------------")
+            do_log(self._modname,self._account,"---------" + str(e) + "  @ddns-------------" )
+            delay_sec = 600
+            return False
+            pass
+
+
         
-        response = conn.getresponse()
-        do_log(self._modname,self._account,str(response.status) + response.reason )
-        # print response.status, response.reason
-        data = response.read()
-        # print data
-        do_log(self._modname,self._account,data)
-        conn.close()
-        return response.status == 200
 
     #获取外网IP
     def getip(self,current_ip):
-        sock = socket.create_connection(('ns1.dnspod.net', 6666))
-        sock.settimeout(10)
         try:
+            sock = socket.create_connection(('ns1.dnspod.net', 6666))
+            sock.settimeout(30)
             ip = sock.recv(16)
+            do_log(self._modname,self._account,"Got outter IP is: " + ip )
+            sock.close()
         except Exception, e:
+            do_log(self._modname,self._account,"Get outter IP failed, use ini ip instead!" )
+            do_log(self._modname,self._account,"---------" + str(e) + "  @getip-------------" )
             ip = current_ip
             print e
-        sock.close()
+            pass
         return ip
 
 
@@ -127,11 +142,28 @@ class pydnspod:
         do_log(self._modname,self._account, "----------------" + self._sub_domain + "-----begin-------" )
         try:
             #从服务器端读取老IP到类全局变量
-            self.get_current_ip_from_dnspot()
-            ip = self.getip(self.current_ip)
-            print "CURRENT IP:",ip
+            try:
+                `self.get_current_ip_from_dnspot()
+            except Exception, e:
+                do_log(self._modname,self._account,"---------" + str(e) + " function get_current_ip_from_dnspot @open-------------" )
+                pass
+            time.sleep(1)
+            try:
+                ip = self.getip(self.current_ip)
+            except Exception, e:
+                do_log(self._modname,self._account,"---------" + str(e) + " function getip @open-------------" )
+                ip = self.current_ip
+                pass  
+            do_log(self._modname,self._account,"Current outter IP is: " +  ip )
+            time.sleep(1)
             if self.current_ip != ip:
-                if self.ddns(ip):
+                t_result = False
+                try:
+                    t_result = self.ddns(ip)
+                except Exception, e:
+                    do_log(self._modname,self._account,"---------" + str(e) + " function ddns @open-------------" )
+                    pass
+                if t_result:
                     do_log(self._modname,self._account,"Got new IP,old IP is: " +  self.current_ip + " ,and new IP is: " + ip )
                     #写配置文件记录
                     self.current_ip = ip
@@ -141,6 +173,7 @@ class pydnspod:
             do_log(self._modname,self._account,"----------------" + self._sub_domain + "-----Done-------" )
         except Exception, e:
             print e
+            do_log(self._modname,self._account,"---------" + str(e) + "  @open-------------" )
             do_log(self._modname,self._account,"----------------" + self._sub_domain + "-----Error-------" )
             pass
     
@@ -163,7 +196,7 @@ def cur_file_dir():
     if os.path.isdir(path):
         return path
     elif os.path.isfile(path):
-        return os.path.dirname(path)       
+        return os.path.dirname(path)
 
 
 #类名务必和服务名以及文件名保持一致，否则执行会失败
@@ -204,26 +237,42 @@ class pypod_service(win32serviceutil.ServiceFramework):
                 do_log(self._modname,self._account,"----------Got delay seconds error , set to 10 min-------------" )
                 delay_sec = 600
                 pass
-            do_log(self._modname,self._account,"---------delay seconds is " + str(delay_sec) + "-------------" )
-            login_token = config.options("login_token")
-            domain_id = config.options("domain_id")
-            record_id = config.options("record_id")
-            sub_domain = config.options("sub_domain")
-            login_dnspods={}
-            for i in range(0,len(login_token)):
-            #for i in range(2,3):
-                time.sleep(5)
-                login_dnspods[i] = pydnspod(
-                                    urllib.unquote(\
-                                    config.get("login_token",login_token[i])),\
-                                    config.get("domain_id",domain_id[i]),\
-                                    config.get("record_id",record_id[i]),\
-                                    config.get("sub_domain",sub_domain[i]),\
-                                    )
-                print "----------------" + str(config.get("sub_domain",sub_domain[i])) + "--------------------"
-                login_dnspods[i].open()
-                print "-------------------------------------------"
+            try:
+                do_log(self._modname,self._account,"---------delay seconds is " + str(delay_sec) + "-------------" )
+                login_token = config.options("login_token")
+                domain_id = config.options("domain_id")
+                record_id = config.options("record_id")
+                sub_domain = config.options("sub_domain")
+                login_dnspods={}
+                for i in range(0,len(login_token)):
+                    time.sleep(5)
+                    login_dnspods[i] = pydnspod(
+                                        urllib.unquote(\
+                                        config.get("login_token",login_token[i])),\
+                                        config.get("domain_id",domain_id[i]),\
+                                        config.get("record_id",record_id[i]),\
+                                        config.get("sub_domain",sub_domain[i]),\
+                                        )
+                    print "----------------" + str(config.get("sub_domain",sub_domain[i])) + "--------------------"
+                    try:
+                        login_dnspods[i].open()
+                    except Exception, e:
+                        do_log(self._modname,self._account,"----------" + str(e) + " ERROR@ function open in SvcDoRun-------------" )
+                        pass
+                    print "-------------------------------------------"
+                del login_dnspods
+                del login_token
+                del domain_id
+                del record_id
+                del sub_domain
+                gc.collect()
+            except Exception, e:
+                print e
+                do_log(self._modname,self._account,"---------" + str(e) + "  @SvcDoRun-------------" )
+                delay_sec = 600
+                pass
             time.sleep(delay_sec) 
+
 
 
     def SvcStop(self): 
