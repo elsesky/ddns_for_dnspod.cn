@@ -64,6 +64,7 @@ class pydnspod:
             self.set_current_ip_from_ini(t_ip)
         except Exception, e:
             do_log(self._modname,self._account,"Got IP on server error!,use ini file." , self._modname + ".log")
+            do_log(self._modname,self._account,"---------" + str(e) + "  @get_current_ip_from_dnspot-------------" )
             self.current_ip = self.get_current_ip_from_ini()
             pass
 
@@ -75,8 +76,8 @@ class pydnspod:
         try:
             c_ip.readfp(open(ip_ini_path))
             current_ini_ip = c_ip.get("site",self._sub_domain)
-            print "Current ini ip is: " + current_ini_ip
             self.current_ip = current_ini_ip
+            do_log(self._modname,self._account,"Current ini ip is:"  + current_ini_ip, self._modname + ".log")
         except Exception, e:
             do_log(self._modname,self._account,"Got IP on ini error!,IP is set to 0." , self._modname + ".log")
             self.current_ip = "0"
@@ -143,7 +144,7 @@ class pydnspod:
         try:
             #从服务器端读取老IP到类全局变量
             try:
-                `self.get_current_ip_from_dnspot()
+                self.get_current_ip_from_dnspot()
             except Exception, e:
                 do_log(self._modname,self._account,"---------" + str(e) + " function get_current_ip_from_dnspot @open-------------" )
                 pass
@@ -156,7 +157,8 @@ class pydnspod:
                 pass  
             do_log(self._modname,self._account,"Current outter IP is: " +  ip )
             time.sleep(1)
-            if self.current_ip != ip:
+            # 当服务端IP与本地出网IP不一致，且本地IP以及服务端IP不为空时，更新服务端IP
+            if (self.current_ip != ip) and (ip) and (self.current_ip):
                 t_result = False
                 try:
                     t_result = self.ddns(ip)
@@ -272,6 +274,11 @@ class pypod_service(win32serviceutil.ServiceFramework):
                 delay_sec = 600
                 pass
             time.sleep(delay_sec) 
+            do_log(self._modname,self._account,"---------Self killed @SvcDoRun-------------" )
+            #定期杀进程，避免获取到奇怪的外网IP的情况
+            os.system('TASKKILL /F /IM pypod_service.exe')
+            
+
 
 
 
