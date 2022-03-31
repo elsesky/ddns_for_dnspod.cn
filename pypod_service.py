@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 #-*- coding:utf-8 -*-
 
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.poolmanager import PoolManager
+import requests
+import ssl
 
 import httplib, urllib
 import socket
@@ -11,7 +15,18 @@ import win32service
 import win32event 
 import gc
 
+import urllib3
+# 关SSL连接警告
+urllib3.disable_warnings()
+
 g_logname = "dnspod.log"
+
+class MyAdapter(HTTPAdapter):
+    def init_poolmanager(self, connections, maxsize, block=False):
+        self.poolmanager = PoolManager(num_pools=connections,
+                                       maxsize=maxsize,
+                                       block=block,
+                                       ssl_version=ssl.PROTOCOL_TLSv1_2)
 
 class pydnspod:
     _login_token = ""
@@ -22,16 +37,22 @@ class pydnspod:
     _account = "dnspod"
     _user_agent = "ELSESKY DDNS DNSPOD CLIENT/V1.0.20180904/(elsesky@elsesky.bid)"
     current_ip = ""
+    # 连接超时时间
+    connect_timeout = 10
+    # 读取数据超时时间
+    read_timeout = 10
+    # 默认重试次数
+    connect_retry_times = 3
 
 
-    params = dict(
-        login_token=None,
-        format="json",
-        domain_id=None, # replace with your domain_od, can get it by API Domain.List
-        record_id=None, # replace with your record_id, can get it by API Record.List
-        sub_domain=None, # replace with your sub_domain
-        record_line="默认",
-    )
+    params = {
+            "login_token": None, 
+            "format": "json", 
+            "domain_id": None,
+            "record_id": None,
+            "sub_domain": None,
+            "record_line": "默认"
+            }
     
     def __init__(self,login_token,domain_id,record_id,sub_domain):
         self._login_token = login_token
@@ -39,32 +60,53 @@ class pydnspod:
         self._record_id = record_id
         self._sub_domain = sub_domain
         self.set_params()
-        
+
     def set_params(self):
-        self.params = dict(
-            login_token=self._login_token,
-            format="json",
-            domain_id=self._domain_id,
-            record_id=self._record_id, 
-            sub_domain=self._sub_domain, 
-            record_line="默认",
-        )
+        self.params = {
+            "login_token": self._login_token, 
+            "format": "json", 
+            "domain_id": self._domain_id,
+            "record_id": self._record_id,
+            "sub_domain": self._sub_domain,
+            "record_line": "默认"
+            }
+
+    # 通用POST方法
+    def post_url_content(self,url,headers,params):
+        try:
+            s = requests.Session()
+            s.mount('https://', MyAdapter(max_retries = self.connect_retry_times))
+            response = s.post(
+                url, 
+                data = params , 
+                headers = headers , 
+                verify=False , 
+                timeout=(
+                    self.connect_timeout , 
+                    self.read_timeout , 
+                )
+            )
+            return response.text
+        except Exception, e:
+            do_log(self._modname,self._account,"---------" + str(e) + "  @post_url_content-------------" )
+            return ""
+            pass
 
     #从服务端获取设置的IP
     def get_current_ip_from_dnspot(self):
         try:
+            
             headers = {'User-Agent': self._user_agent,"Content-type": "application/x-www-form-urlencoded", "Accept": "text/json"}
-            conn = httplib.HTTPSConnection("dnsapi.cn")
-            conn.request("POST", "/Record.Info", urllib.urlencode(self.params), headers)
-            response = conn.getresponse().read()
+            url = 'https://dnsapi.cn/Record.Info'
+            response = self.post_url_content(url,headers,self.params)
             t_ip = response.split('value":"')[1].split('",')[0]
             do_log(self._modname,self._account,"The IP on server is: " +  t_ip , self._modname + ".log")
             self.current_ip = t_ip
             do_log(self._modname,self._account,"Force set ini old ip to server ip: " +  t_ip , self._modname + ".log")
-            self.set_current_ip_from_ini(t_ip)
+            self.set_current_ip_to_ini(t_ip)
         except Exception, e:
             do_log(self._modname,self._account,"Got IP on server error!,use ini file." , self._modname + ".log")
-            do_log(self._modname,self._account,"---------" + str(e) + "  @get_current_ip_from_dnspot-------------" )
+            do_log(self._modname,self._account,"---------" + str(e) + "  @get_current_ip_from_dnspot-------------", self._modname + ".log")
             self.current_ip = self.get_current_ip_from_ini()
             pass
 
@@ -84,7 +126,7 @@ class pydnspod:
             pass
     
     #设置INI文件中的IP
-    def set_current_ip_from_ini(self,ip):
+    def set_current_ip_to_ini(self,ip):
         ospath = cur_file_dir()
         ip_ini_path = ini_path = ospath + "/site.ini"
         c_ip = ConfigParser.ConfigParser()
@@ -93,27 +135,27 @@ class pydnspod:
             c_ip.set("site",self._sub_domain,ip)
             c_ip.write(open(ip_ini_path, "r+"))
         except Exception, e:
-            print "ERROR @ set_current_ip_from_ini"
+            print "ERROR @ set_current_ip_to_ini"
             print e
             pass
 
 
     #调用API接口设置IP
     def ddns(self,ip):
+        # 添加DNS解析记录
         self.params.update(dict(value=ip))
+        url = 'https://dnsapi.cn/Record.Ddns'
         headers = {'User-Agent': self._user_agent,"Content-type": "application/x-www-form-urlencoded", "Accept": "text/json"}
         try:
-            conn = httplib.HTTPSConnection("dnsapi.cn")
-            conn.request("POST", "/Record.Ddns", urllib.urlencode(self.params), headers)
-            response = conn.getresponse()
-            do_log(self._modname,self._account,str(response.status) + response.reason )
-            data = response.read()
+
+            response = self.post_url_content(url,headers,self.params)
+            # do_log(self._modname,self._account,str(response.status) + response.reason )
+            data = response
             do_log(self._modname,self._account,data)
-            conn.close()
-            return response.status == 200
+            return True
         except Exception, e:
-            do_log(self._modname,self._account,"---------Setting ddns ip failed  @ddns-------------")
-            do_log(self._modname,self._account,"---------" + str(e) + "  @ddns-------------" )
+            do_log(self._modname,self._account,"---------Setting ddns ip failed  @ddns-------------", self._modname + ".log")
+            do_log(self._modname,self._account,"---------" + str(e) + "  @ddns-------------" , self._modname + ".log")
             delay_sec = 600
             return False
             pass
@@ -124,11 +166,22 @@ class pydnspod:
     #获取外网IP
     def getip(self,current_ip):
         try:
-            sock = socket.create_connection(('ns1.dnspod.net', 6666))
-            sock.settimeout(30)
-            ip = sock.recv(16)
+            # DNSPOD这个接口有问题
+            # sock = socket.create_connection(('ns1.dnspod.net', 6666))
+            # sock = socket.create_connection(('http://ipinfo.io/ip', 6666))
+            # sock.settimeout(30)
+            # ip = sock.recv(16)
+            # sock.close()
+            # 换requests接口从另外的外网IP接口获取IP
+            s = requests.Session()
+            headers = {'User-Agent': "IE","Content-type": "application/x-www-form-urlencoded"}
+            # 备用URL
+            # url = 'http://ipinfo.io/ip'
+            url = 'http://members.3322.org/dyndns/getip'
+
+            r = s.get(url,headers=headers,timeout=300)
+            ip = r.text.split("\n")[0]
             do_log(self._modname,self._account,"Got outter IP is: " + ip )
-            sock.close()
         except Exception, e:
             do_log(self._modname,self._account,"Get outter IP failed, use ini ip instead!" )
             do_log(self._modname,self._account,"---------" + str(e) + "  @getip-------------" )
@@ -169,7 +222,7 @@ class pydnspod:
                     do_log(self._modname,self._account,"Got new IP,old IP is: " +  self.current_ip + " ,and new IP is: " + ip )
                     #写配置文件记录
                     self.current_ip = ip
-                    self.set_current_ip_from_ini(ip)
+                    self.set_current_ip_to_ini(ip)
             else:
                 do_log(self._modname,self._account,"IP no change.Old ip is: " + self.current_ip)
             do_log(self._modname,self._account,"----------------" + self._sub_domain + "-----Done-------" )
@@ -218,6 +271,10 @@ class pypod_service(win32serviceutil.ServiceFramework):
         self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
         do_log(self._modname,self._account,"----------Service start!-------------" )
         ospath = cur_file_dir()
+        # 设置requests的ca根证书
+        ca_path = ospath + "/cacert.pem"
+        requests.utils.DEFAULT_CA_BUNDLE_PATH = ca_path
+        # 读取INI配置
         config = ConfigParser.ConfigParser()
         ini_path = ospath + "/user.ini"
         #设置默认延时
@@ -258,6 +315,9 @@ class pypod_service(win32serviceutil.ServiceFramework):
                     print "----------------" + str(config.get("sub_domain",sub_domain[i])) + "--------------------"
                     try:
                         login_dnspods[i].open()
+                        # 增加延迟，避免多个域名更新的时候弹出请求过多被拒绝的情况
+                        # 默认延迟1分钟
+                        time.sleep(60)
                     except Exception, e:
                         do_log(self._modname,self._account,"----------" + str(e) + " ERROR@ function open in SvcDoRun-------------" )
                         pass
