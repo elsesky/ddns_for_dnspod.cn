@@ -33,4 +33,5 @@ DNSPOD中国站DDNS简易客户端
       -  uilistpod.ui         界面布局的qt源码，请使用pyqt自带工具进行修改（有童鞋愿意直接改源代码也行啦……）
       -  __init__.py          保持默认
 
-
+# 注意
+- 凡提示Token不对的，请检查token是否按照接口要求生成，格式为：UID+SECTOKEN。示例：63753,8e1b57e60deed74ce26ed20db0c42981
